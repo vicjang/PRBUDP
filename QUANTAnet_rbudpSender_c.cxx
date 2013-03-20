@@ -24,6 +24,8 @@
 
 #include <stdarg.h>
 
+#define SIZE_OF_EBR 2
+
 // If you want to output debug info on terminals when running, put
 //  fprintf(stderr, __VA_ARGS__);\
 //  fprintf(stderr, "\n");\
@@ -56,21 +58,58 @@ void QUANTAnet_rbudpSender_c::send(void * buffer, int bufSize, int sendRate, int
 	struct timeval curTime, startTime;
 	double srate;
 	gettimeofday(&curTime, NULL);
+    int theEbr = 0;
+    char ebrMSB = 0;
+    char ebrLSB = 0;
+
+
 	startTime = curTime;
+
+
+
+    // Vic Cheng added -->
+    char firstEbr[3];
+    int n = readn( tcpSockfd, firstEbr, 3 );
+    if (n<0)
+    {
+        perror("read");
+        exit(1);
+    }
+        // Vic Cheng added -->
+        ebrMSB = firstEbr[sizeofErrorBitmap];
+        ebrLSB = firstEbr[sizeofErrorBitmap + 1];
+        theEbr = ( ebrMSB << 8 )+ ebrLSB;
+        // Vic <--
+        // Vic Cheng added --> debug
+        printf( "          EBR received from receiver is %d\n", theEbr );
+        // Vic Cheng <--
+
+        // Vic Cheng added -->
+
+        //usecsPerPacket = 8 * payloadSize * 1000 / ( theEbr * 1000 ) ;
+if(verbose>1) TRACE_DEBUG("          original send Rate              is %d", sendRate );
+if(verbose>1) TRACE_DEBUG("          new      send Rate based on EBR is %d", theEbr * 1000 );
+        sendRate = theEbr * 1000;
+        // Vic Cheng <--
+    // Vic Cheng <--
+
+
 	initSendRudp(buffer, bufSize, sendRate, packetSize);	
+
+
 	while (!done)
 	{
 		// blast UDP packets
-		if(verbose>1) TRACE_DEBUG("sending UDP packets");
+//		if(verbose>1) TRACE_DEBUG("sending UDP packets");
 		reportTime(curTime);
 		udpSend();
 
 		srate = (double) remainNumberOfPackets * payloadSize * 8 / (double) reportTime(curTime);	
-		if(verbose>1) TRACE_DEBUG("real sending rate in this send is %f", srate);
+		if(verbose>1) TRACE_DEBUG("        !!! real sending rate in this send is ( %f MBits/s )", srate);
 		
 		// send end of UDP signal
-		if(verbose>1) TRACE_DEBUG("send to socket %d an end signal.", tcpSockfd); 
-		if(verbose>1) fprintf(stderr,"write %d bytes.\n", sizeof(endOfUdp));
+//		if(verbose>1) TRACE_DEBUG("send to socket %d an end signal.", tcpSockfd); 
+//		if(verbose>1) fprintf(stderr,"write %d bytes.\n", sizeof(endOfUdp));
 		writen(tcpSockfd, (char *)&endOfUdp, sizeof(endOfUdp));
 		endOfUdp.round ++;
 
@@ -81,17 +120,35 @@ void QUANTAnet_rbudpSender_c::send(void * buffer, int bufSize, int sendRate, int
 		// receive error list
 		if(verbose>1) TRACE_DEBUG("waiting for error bitmap");
 		
-		int n = readn(tcpSockfd, errorBitmap, sizeofErrorBitmap);
+        // Vic modifieid -->
+		//int n = readn(tcpSockfd, errorBitmap, sizeofErrorBitmap);
+        int n = readn(tcpSockfd, errorBitmap, sizeofErrorBitmap + SIZE_OF_EBR );
+        // Vic <--
 		if (n<0) {
         	        perror("read");
                 	exit(1);
 	        }
-		
+
+        // Vic Cheng added -->
+        ebrMSB = errorBitmap[sizeofErrorBitmap];
+        ebrLSB = errorBitmap[sizeofErrorBitmap + 1];
+        theEbr = ( ebrMSB << 8 )+ ebrLSB;
+        // Vic <--
+        // Vic Cheng added --> debug
+        printf( "        EBR received from receiver is %d\n", theEbr );
+        // Vic Cheng <--
+
+        // Vic Cheng added -->
+        usecsPerPacket = 8 * payloadSize * 1000 / ( theEbr * 1000 ) ;
+if(verbose>1) TRACE_DEBUG("        usecsPerPacket updated to %d", usecsPerPacket);
+        // Vic Cheng <--
+
+
 		if ((unsigned char)errorBitmap[0] == 1)
                 {
-			done = 1;
-                        remainNumberOfPackets = 0;
-			if(verbose>1) TRACE_DEBUG("done.");
+                done = 1;
+                remainNumberOfPackets = 0;
+                if(verbose>1) TRACE_DEBUG("done.");
                 }
 		else
 		{
@@ -108,7 +165,7 @@ void QUANTAnet_rbudpSender_c::send(void * buffer, int bufSize, int sendRate, int
 		    float dt = (curTime.tv_sec - startTime.tv_sec)
 				+ 1e-6*(curTime.tv_usec - startTime.tv_usec);
 		    float mbps = 1e-6 * 8*bufSize / (dt == 0 ? .01 : dt);
-		    TRACE_DEBUG("loss rate: %f  on %dK in %.3f seconds (%.2f Mbits/s)",
+//		    TRACE_DEBUG("loss rate: %f  on %dK in %.3f seconds (%.2f Mbits/s)",
 			lossRate, (int)bufSize >> 10, dt, mbps);
 		    if(verbose>1) TRACE_DEBUG("usecsPerPacket updated to %d", usecsPerPacket);
 		}
@@ -380,7 +437,10 @@ int QUANTAnet_rbudpSender_c::initSendRudp(void* buffer, int bufSize, int sRate, 
 
 	remainNumberOfPackets = totalNumberOfPackets;
 	sizeofErrorBitmap = totalNumberOfPackets/8 + 2;
-	errorBitmap = (char *)malloc(sizeofErrorBitmap);
+    // Vic Cheng modified -->
+    //errorBitmap = (char *)malloc(sizeofErrorBitmap);
+	errorBitmap = (char *)malloc( sizeofErrorBitmap + SIZE_OF_EBR );
+    // Vic <--
 	hashTable = (long long *)malloc(totalNumberOfPackets * sizeof(long long));
 	
 	endOfUdp.round = 0;
