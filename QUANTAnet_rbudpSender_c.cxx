@@ -165,8 +165,7 @@ if(verbose>1) TRACE_DEBUG("        usecsPerPacket updated to %d", usecsPerPacket
 		    float dt = (curTime.tv_sec - startTime.tv_sec)
 				+ 1e-6*(curTime.tv_usec - startTime.tv_usec);
 		    float mbps = 1e-6 * 8*bufSize / (dt == 0 ? .01 : dt);
-//		    TRACE_DEBUG("loss rate: %f  on %dK in %.3f seconds (%.2f Mbits/s)",
-			lossRate, (int)bufSize >> 10, dt, mbps);
+//		    TRACE_DEBUG("loss rate: %f  on %dK in %.3f seconds (%.2f Mbits/s)", lossRate, (int)bufSize >> 10, dt, mbps);
 		    if(verbose>1) TRACE_DEBUG("usecsPerPacket updated to %d", usecsPerPacket);
 		}
 	     }
