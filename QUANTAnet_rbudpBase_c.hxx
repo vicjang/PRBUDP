@@ -117,7 +117,10 @@ protected:
   // Size of the file name the receiver wants to get from the sender
   static const int SIZEOFFILENAME = 256;
 
-  static const int UDPSOCKBUF = 8388608;
+  // Vic Cheng modified -->
+  //static const int UDPSOCKBUF = 8388608;
+  static const int UDPSOCKBUF = 4194304;
+  // Vic Cheng <--
 
   static const int SUCCESS = 1;
 
