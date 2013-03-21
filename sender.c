@@ -35,6 +35,8 @@ int main(void)
         }
     }
 
-    while( 1 );
+
+    printf( "Parallel sending finished.\n" );
+
     return 0;
 }
