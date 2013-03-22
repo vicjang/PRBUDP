@@ -1,5 +1,25 @@
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+
+void splitFile( void )
+{
+    struct stat buffer;
+    int fildes = open( "/Users/vicjang/test50", O_RDWR );
+    int status = fstat( fildes, &buffer );
+    int filesize = (int)buffer.st_size;
+
+    char spltcmd[100];
+    memset( spltcmd, 0, sizeof( spltcmd ) );
+    sprintf( spltcmd, "split -b %d /Users/vicjang/test50", filesize / 2 );
+    printf( "%s\n", spltcmd );
+    system( spltcmd );
+
+    system( "mv xaa /Users/vicjang/xaa" );
+    system( "mv xab /Users/vicjang/xab" );
+}
 
 int main(void)
 {
@@ -8,8 +28,7 @@ int main(void)
     pid_t childPid1;
     pid_t childPid2;
 
-    //splitFile();
-
+    splitFile();
 
     if( ( childPid1 = fork() ) == 0 )
     {
