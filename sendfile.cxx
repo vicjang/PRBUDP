@@ -26,15 +26,19 @@ int
 main (int argc, char **argv)
 {
   int sendRate;
+  int portNumber;
 
-  if (argc < 4)
+  if (argc < 5)
     {
-      printf ("Usage: sendfile <receiver> <sending rate (Kbps)> <MTU>\n");
+      printf ("Usage: sendfile <receiver> <sending rate (Kbps)> <MTU> <PORT>\n");
       exit (1);
     }
 
+  portNumber = atoi( argv[4] );
+
+  printf( "port = %d\n", portNumber );
   sendRate = atoi (argv[2]);
-  QUANTAnet_rbudpSender_c *mysender = new QUANTAnet_rbudpSender_c (38000);
+  QUANTAnet_rbudpSender_c *mysender = new QUANTAnet_rbudpSender_c ( portNumber );
   mysender->init (argv[1]);
 
   mysender->sendfile (sendRate, atoi (argv[3]));
